@@ -136,6 +136,11 @@ function SpreadSheet({ documentName }: SpreadSheetProps) {
    * If the edit status is false then it will ask the machine to update the current formula.
    */
   function onCellClick(event: React.MouseEvent<HTMLButtonElement>): void {
+    // if the user name is not set then alert the user and return
+    if(!spreadSheetClient.userName) {
+      alert("Please enter a user name");
+      return;
+    }
 
     const cellLabel = event.currentTarget.getAttribute("cell-label");
     // calculate the current row and column of the clicked on cell
