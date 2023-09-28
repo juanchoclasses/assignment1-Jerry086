@@ -1,8 +1,6 @@
-import Cell from "./Cell"
-import SheetMemory from "./SheetMemory"
+import Cell from "./Cell";
+import SheetMemory from "./SheetMemory";
 import { ErrorMessages } from "./GlobalDefinitions";
-
-
 
 export class FormulaEvaluator {
   // Define a function called update that takes a string parameter and returns a number
@@ -13,89 +11,182 @@ export class FormulaEvaluator {
   private _sheetMemory: SheetMemory;
   private _result: number = 0;
 
-
   constructor(memory: SheetMemory) {
     this._sheetMemory = memory;
   }
 
   /**
-    * place holder for the evaluator.   I am not sure what the type of the formula is yet 
-    * I do know that there will be a list of tokens so i will return the length of the array
-    * 
-    * I also need to test the error display in the front end so i will set the error message to
-    * the error messages found In GlobalDefinitions.ts
-    * 
-    * according to this formula.
-    * 
-    7 tokens partial: "#ERR",
-    8 tokens divideByZero: "#DIV/0!",
-    9 tokens invalidCell: "#REF!",
-  10 tokens invalidFormula: "#ERR",
-  11 tokens invalidNumber: "#ERR",
-  12 tokens invalidOperator: "#ERR",
-  13 missingParentheses: "#ERR",
-  0 tokens emptyFormula: "#EMPTY!",
+   * reset the evaluator
+   * @param formula
+   */
+  reset(formula: FormulaType) {
+    this._currentFormula = [...formula];
+    this._errorOccured = false;
+    this._errorMessage = "";
+    this._lastResult = 0;
+    this._result = 0;
+  }
 
-                    When i get back from my quest to save the world from the evil thing i will fix.
-                      (if you are in a hurry you can fix it yourself)
-                               Sincerely 
-                               Bilbo
-    * 
+  /**
+   * evaluate the formula by recursive descent parser
+   * @param formula
+   * @returns the value of the expression in the tokenized formula
+   *
+   * If the formula is valid, returns the value of the expression in the formula
+   * Otherwise sets the errorOccured flag to true and sets the errorMessage
+   * The empty formula is considered as an emptyFormula error
    */
 
   evaluate(formula: FormulaType) {
+    // reset the evaluator for the new formula
+    this.reset(formula);
 
+    // if the formula is empty set the errorOccured flag to true
+    if (formula.length === 0) {
+      this._errorOccured = true;
+      this._errorMessage = ErrorMessages.emptyFormula;
+      return;
+    }
 
-    // set the this._result to the length of the formula
+    // get the value of the expression in the formula
+    // expression = term {("+" | "-") term}
+    this._result = this.expression();
 
-    this._result = formula.length;
-    this._errorMessage = "";
+    if (this._errorOccured) {
+      return;
+    }
 
-    switch (formula.length) {
-      case 0:
-        this._errorMessage = ErrorMessages.emptyFormula;
-        break;
-      case 7:
-        this._errorMessage = ErrorMessages.partial;
-        break;
-      case 8:
-        this._errorMessage = ErrorMessages.divideByZero;
-        break;
-      case 9:
-        this._errorMessage = ErrorMessages.invalidCell;
-        break;
-      case 10:
-        this._errorMessage = ErrorMessages.invalidFormula;
-        break;
-      case 11:
-        this._errorMessage = ErrorMessages.invalidNumber;
-        break;
-      case 12:
-        this._errorMessage = ErrorMessages.invalidOperator;
-        break;
-      case 13:
-        this._errorMessage = ErrorMessages.missingParentheses;
-        break;
-      default:
-        this._errorMessage = "";
-        break;
+    // if there are still tokens in the formula, set the errorOccured flag to true and set the errorMessage
+    if (this._currentFormula.length > 0) {
+      this._errorOccured = true;
+      this._errorMessage = ErrorMessages.invalidFormula;
     }
   }
 
+  /**
+   * expression = term {("+" | "-") term}
+   * term does not contain "+"/"-
+   * @returns the value of the expression
+   */
+  private expression(): number {
+    // extract the first term
+    // term = factor {("*" | "/") factor}
+    let result = this.term();
+    // resolve "+"/"-" operators
+    while (
+      this._currentFormula.length > 0 &&
+      (this._currentFormula[0] === "+" || this._currentFormula[0] === "-")
+    ) {
+      // extract the operator
+      let operator = this._currentFormula.shift();
+      // extract the next term
+      let term = this.term();
+      if (operator === "+") {
+        result += term;
+      } else {
+        result -= term;
+      }
+    }
+    this._lastResult = result;
+    return result;
+  }
+
+  /**
+   * term = factor {("*" | "/") factor}
+   * factor does not contain "*"/"/"
+   * @returns the value of the term
+   */
+  private term(): number {
+    // extract the first factor
+    let result = this.factor();
+    while (
+      this._currentFormula.length > 0 &&
+      (this._currentFormula[0] === "*" || this._currentFormula[0] === "/")
+    ) {
+      // extract the operator
+      let operator = this._currentFormula.shift();
+      // extract the next factor
+      let factor = this.factor();
+      if (operator === "*") {
+        result *= factor;
+      } else {
+        if (factor === 0) {
+          this._errorOccured = true;
+          this._errorMessage = ErrorMessages.divideByZero;
+          this._lastResult = Infinity;
+          return Infinity;
+        }
+        result /= factor;
+      }
+    }
+    this._lastResult = result;
+    return result;
+  }
+
+  /**
+   * factor = number | (expression) | cellReference
+   * anything else is an error
+   * @returns the value of the factor
+   */
+  private factor(): number {
+    let result = 0;
+    // if the formula is empty, set as partial error
+    if (this._currentFormula.length === 0) {
+      this._errorOccured = true;
+      this._errorMessage = ErrorMessages.partial;
+      return result;
+    }
+
+    // extract the first token from the formula
+    let token = this._currentFormula.shift();
+
+    // if the token is a number, set the value of the factor to the number
+    if (this.isNumber(token)) {
+      result = Number(token);
+      this._lastResult = result;
+
+      // if the token is a "(" get the value of the expression
+    } else if (token === "(") {
+      // extract the whole expression in the paratheses
+      result = this.expression();
+      if (
+        this._currentFormula.length === 0 ||
+        this._currentFormula.shift() !== ")"
+      ) {
+        this._errorOccured = true;
+        this._errorMessage = ErrorMessages.missingParentheses;
+        this._lastResult = result;
+      }
+
+      // if the token is a cell reference get the value of the cell
+    } else if (this.isCellReference(token)) {
+      [result, this._errorMessage] = this.getCellValue(token);
+
+      // if the cell value is invalid, raise the error flag
+      if (this._errorMessage !== "") {
+        this._errorOccured = true;
+        this._lastResult = result;
+      }
+
+      // invalid token
+    } else {
+      this._errorOccured = true;
+      this._errorMessage = ErrorMessages.invalidFormula;
+    }
+    return result;
+  }
+
   public get error(): string {
-    return this._errorMessage
+    return this._errorMessage;
   }
 
   public get result(): number {
     return this._result;
   }
 
-
-
-
   /**
-   * 
-   * @param token 
+   *
+   * @param token
    * @returns true if the toke can be parsed to a number
    */
   isNumber(token: TokenType): boolean {
@@ -103,26 +194,24 @@ export class FormulaEvaluator {
   }
 
   /**
-   * 
+   *
    * @param token
    * @returns true if the token is a cell reference
-   * 
+   *
    */
   isCellReference(token: TokenType): boolean {
-
     return Cell.isValidCellLabel(token);
   }
 
   /**
-   * 
+   *
    * @param token
    * @returns [value, ""] if the cell formula is not empty and has no error
    * @returns [0, error] if the cell has an error
    * @returns [0, ErrorMessages.invalidCell] if the cell formula is empty
-   * 
+   *
    */
   getCellValue(token: TokenType): [number, string] {
-
     let cell = this._sheetMemory.getCellByLabel(token);
     let formula = cell.getFormula();
     let error = cell.getError();
@@ -137,13 +226,9 @@ export class FormulaEvaluator {
       return [0, ErrorMessages.invalidCell];
     }
 
-
     let value = cell.getValue();
     return [value, ""];
-
   }
-
-
 }
 
 export default FormulaEvaluator;
