@@ -1,6 +1,6 @@
 ### Name of student that you code reviewed.
-- Name:
-- GitHub ID:
+- Name: Zhongyu Wei 
+- GitHub ID: Jerry086
 
 
 ### Things that you noticed
