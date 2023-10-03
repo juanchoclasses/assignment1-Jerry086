@@ -12,7 +12,7 @@ GitHub Handle: Jerry086
 
 - Did you collaborate or share ideas with any other students/TAs/Professors?
 
-N/A
+Yes, I discussed with my teammates Saif and Jieyu about the assignment.
 
 - Did you use any external resources?
 
