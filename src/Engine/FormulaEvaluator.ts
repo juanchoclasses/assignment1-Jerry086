@@ -17,10 +17,9 @@ export class FormulaEvaluator {
 
   /**
    * reset the evaluator
-   * @param formula
    */
-  reset(formula: FormulaType) {
-    this._currentFormula = [...formula];
+  reset() {
+    this._currentFormula = [];
     this._errorOccured = false;
     this._errorMessage = "";
     this._lastResult = 0;
@@ -39,10 +38,11 @@ export class FormulaEvaluator {
 
   evaluate(formula: FormulaType) {
     // reset the evaluator for the new formula
-    this.reset(formula);
+    this.reset();
+    this._currentFormula = [...formula];
 
     // if the formula is empty set the errorOccured flag to true
-    if (formula.length === 0) {
+    if (this._currentFormula.length === 0) {
       this._errorOccured = true;
       this._errorMessage = ErrorMessages.emptyFormula;
       return;
@@ -87,7 +87,6 @@ export class FormulaEvaluator {
         result -= term;
       }
     }
-    this._lastResult = result;
     return result;
   }
 
@@ -113,13 +112,11 @@ export class FormulaEvaluator {
         if (factor === 0) {
           this._errorOccured = true;
           this._errorMessage = ErrorMessages.divideByZero;
-          this._lastResult = Infinity;
           return Infinity;
         }
         result /= factor;
       }
     }
-    this._lastResult = result;
     return result;
   }
 
@@ -143,8 +140,6 @@ export class FormulaEvaluator {
     // if the token is a number, set the value of the factor to the number
     if (this.isNumber(token)) {
       result = Number(token);
-      this._lastResult = result;
-
       // if the token is a "(" get the value of the expression
     } else if (token === "(") {
       // extract the whole expression in the paratheses
@@ -155,7 +150,6 @@ export class FormulaEvaluator {
       ) {
         this._errorOccured = true;
         this._errorMessage = ErrorMessages.missingParentheses;
-        this._lastResult = result;
       }
 
       // if the token is a cell reference get the value of the cell
@@ -165,7 +159,6 @@ export class FormulaEvaluator {
       // if the cell value is invalid, raise the error flag
       if (this._errorMessage !== "") {
         this._errorOccured = true;
-        this._lastResult = result;
       }
 
       // invalid token
