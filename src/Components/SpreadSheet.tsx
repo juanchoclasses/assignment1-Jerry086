@@ -82,6 +82,10 @@ function SpreadSheet({ documentName }: SpreadSheetProps) {
    * the other buttons do require asynchronous processing and so the function is marked async
    */
   async function onCommandButtonClick(text: string): Promise<void> {
+    if(!spreadSheetClient.userName) {
+      alert("Please enter a user name");
+      return;
+    }
 
 
     switch (text) {
@@ -116,7 +120,10 @@ function SpreadSheet({ documentName }: SpreadSheetProps) {
    * 
    * */
   function onButtonClick(event: React.MouseEvent<HTMLButtonElement>): void {
-
+    if(!spreadSheetClient.userName) {
+      alert("Please enter a user name");
+      return;
+    }
     const text = event.currentTarget.textContent;
     let trueText = text ? text : "";
     spreadSheetClient.setEditStatus(true);
