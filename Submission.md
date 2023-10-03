@@ -4,7 +4,7 @@
 
 Name: Zhongyu Wei
 
-GitHub Handle:
+GitHub Handle: Jerry086
 
 - How many hours did it take you to complete this assignment?
 
